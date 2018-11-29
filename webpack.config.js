@@ -1,6 +1,9 @@
 const resolve = require('path').resolve;
 const autoprefixer = require('autoprefixer');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
+const WebpackVisualizerPlugin = require('webpack-visualizer-plugin');
 
 module.exports = (env, argv) => {
   const mode = argv.mode || process.env.NODE_ENV || 'development';
@@ -73,9 +76,48 @@ module.exports = (env, argv) => {
         }
       ]
     },
+    optimization: {
+      minimize: true,
+      minimizer: [
+        new UglifyJsPlugin({
+          sourceMap: false,
+          cache: true,
+          parallel: true,
+          uglifyOptions: {
+            compress: false,
+            ecma: 6,
+            mangle: true,
+            output: {
+              comments: devMode ? true : false
+            }
+          }
+        }),
+        new OptimizeCSSAssetsPlugin({})
+      ],
+      splitChunks: {
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            chunks: 'async',
+            name: 'vendor',
+            priority: -10,
+            enforce: true
+          },
+          react: {
+            test: /react/,
+            chunks: 'initial',
+            name: 'react',
+            priority: 20,
+            enforce: true
+          }
+        }
+      },
+      runtimeChunk: true
+    },
     plugins: [
       new HtmlWebpackPlugin({
         template: resolve(__dirname, 'client/template.html'),
+        inject: 'body',
         minify: {
           collapseWhitespace: true,
           collapseInlineTagWhitespace: true,
@@ -83,7 +125,7 @@ module.exports = (env, argv) => {
           removeRedundantAttributes: true
         }
       })
-    ],
+    ].concat(devMode ? [new WebpackVisualizerPlugin()] : []),
 
     devServer: {
       historyApiFallback: true,
